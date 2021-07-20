@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# Check for mandatory argument
+test $# -eq 0 && echo "error: branch argument required" 1>&2 && exit 1
+
+# Check for branch mode or origin + branch mode
+if test $# -eq 1
+then
+    REMOTE="origin"
+    TARGET=$1
+elif test $# -eq 2
+then
+    REMOTE=$1
+    TARGET=$2
+
+    remotes=( $(git remote) )
+
+    [[ " ${remotes[@]} " =~ " $REMOTE " ]] || echo "error: '$REMOTE' does not appear to be a git repository" 1>&2 || exit 1
+else
+    echo "error: too many arguments" 1>&2
+    exit 1
+fi
+
+CURRENT=$(git branch --show-current)
+
+# Check if target branch is not the same
+[[ $CURRENT == $TARGET ]] && echo "error: must target a branch different from the current one" 1>&2 && exit 1
+
+# Stash everything
+git stash --all || exit 1
+
+# Check if target branch exists
+git checkout $TARGET || exit 1
+
+git pull $REMOTE $TARGET || echo "error: merge failed, aborting procedure" || git merge --abort || exit 1
+
+git checkout $CURRENT || exit 1
+
+echo "merging $TARGET into $CURRENT"
+
+git merge $TARGET || echo "error: merge failed, aborting procedure" || git merge --abort || exit 1
+
+git stash pop || exit 1
