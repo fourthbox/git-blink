@@ -26,18 +26,28 @@ CURRENT=$(git branch --show-current)
 # Check if target branch is not the same
 [[ $CURRENT == $TARGET ]] && echo "error: must target a branch different from the current one" 1>&2 && exit 1
 
+echo "stashing working files..."
+
 # Stash everything
 git stash --all || exit 1
+
+echo "checking out to $TARGET..."
 
 # Check if target branch exists
 git checkout $TARGET || exit 1
 
+echo "fetching and merging new commits..."
+
 git pull $REMOTE $TARGET || echo "error: merge failed, aborting procedure" || git merge --abort || exit 1
+
+echo "checking out to $CURRENT..."
 
 git checkout $CURRENT || exit 1
 
 echo "merging $TARGET into $CURRENT"
 
 git merge $TARGET || echo "error: merge failed, aborting procedure" || git merge --abort || exit 1
+
+echo "restoring from stash"
 
 git stash pop || exit 1
